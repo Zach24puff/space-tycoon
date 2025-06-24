@@ -5,22 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Space Station Tycoon.io</title>
   <style>
+    /* Vollbild Canvas für Sterne */
+    #starfield {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      background: #0b0f2a;
+    }
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: url('https://images.unsplash.com/photo-1571896349842-33c89424de5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-      background-size: cover;
       color: white;
+      overflow-x: hidden;
+      position: relative;
+      z-index: 10;
     }
 
     .container {
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       padding: 20px;
       max-width: 700px;
       margin: 40px auto;
       border-radius: 15px;
       box-shadow: 0 0 20px #00ffcc;
+      position: relative;
+      z-index: 20;
     }
 
     h1 {
@@ -57,7 +70,6 @@
       margin-bottom: 20px;
     }
 
-    /* Container für die Icons */
     .modules-visual {
       display: flex;
       justify-content: center;
@@ -88,9 +100,12 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- Sternenhimmel Canvas -->
+  <canvas id="starfield"></canvas>
+
+  <div class="container" role="main">
     <h1>🚀 Space Station Tycoon.io</h1>
-    <div class="stats">
+    <div class="stats" aria-live="polite">
       ⚡ Energie: <span id="energie">0</span> |
       💰 Credits: <span id="credits">0</span> |
       🔬 Forschung: <span id="forschung">0</span>
@@ -114,21 +129,21 @@
     </div>
 
     <div class="modules-visual" aria-label="Gebäude Visualisierung">
-      <div class="module-icon" id="visual-solar">
+      <div class="module-icon" id="visual-solar" aria-live="polite">
         <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
           <circle cx="32" cy="32" r="12" stroke="#00ffcc" stroke-width="2" fill="none"/>
           <rect x="26" y="20" width="12" height="24" fill="#00ffcc"/>
         </svg>
         <span>Solarpanel: <span class="count" id="count-solar">0</span></span>
       </div>
-      <div class="module-icon" id="visual-handel">
+      <div class="module-icon" id="visual-handel" aria-live="polite">
         <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
           <rect x="16" y="24" width="32" height="20" fill="#00ffcc" stroke="#00ffcc" stroke-width="2" rx="4" ry="4"/>
           <rect x="28" y="16" width="8" height="8" fill="#00ffcc"/>
         </svg>
         <span>Handelsstation: <span class="count" id="count-handel">0</span></span>
       </div>
-      <div class="module-icon" id="visual-labor">
+      <div class="module-icon" id="visual-labor" aria-live="polite">
         <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
           <rect x="22" y="18" width="20" height="28" fill="#00ffcc" stroke="#00ffcc" stroke-width="2" rx="3" ry="3"/>
           <circle cx="32" cy="32" r="6" fill="#000" stroke="#00ffcc" stroke-width="2"/>
@@ -141,21 +156,24 @@
   </div>
 
   <script>
+    // Spielwerte
     let energie = 0, credits = 200, forschung = 0;
     let solarpanels = 0, handelsstationen = 0, labore = 0;
     let solarBoost = 1, handelBoost = 1, laborBoost = 1;
 
+    // Update Funktion: Werte + Visuals
     function update() {
       document.getElementById('energie').innerText = Math.floor(energie);
       document.getElementById('credits').innerText = Math.floor(credits);
       document.getElementById('forschung').innerText = Math.floor(forschung);
 
-      // Update Visual Counts
+      // Visual-Counts updaten
       document.getElementById('count-solar').innerText = solarpanels;
       document.getElementById('count-handel').innerText = handelsstationen;
       document.getElementById('count-labor').innerText = labore;
     }
 
+    // Bauen von Gebäuden
     function build(typ) {
       if (typ === 'solar' && credits >= 100) { credits -= 100; solarpanels++; }
       else if (typ === 'handel' && energie >= 250) { energie -= 250; handelsstationen++; }
@@ -165,6 +183,7 @@
       update();
     }
 
+    // Upgrades
     function upgrade(typ) {
       if (forschung < 1000) return;
       forschung -= 1000;
@@ -174,12 +193,14 @@
       update();
     }
 
+    // Spiel speichern
     function saveGame() {
       const save = {energie, credits, forschung, solarpanels, handelsstationen, labore, solarBoost, handelBoost, laborBoost};
       localStorage.setItem('tycoonSave', JSON.stringify(save));
       alert('Spiel gespeichert!');
     }
 
+    // Spiel laden
     function loadGame() {
       const save = JSON.parse(localStorage.getItem('tycoonSave'));
       if (!save) return alert('Kein Spielstand gefunden.');
@@ -187,6 +208,7 @@
       update();
     }
 
+    // Spielwerte jede Sekunde erhöhen
     setInterval(() => {
       energie += solarpanels * 5 * solarBoost;
       credits += handelsstationen * 10 * handelBoost;
@@ -195,6 +217,76 @@
     }, 1000);
 
     update();
+
+    // === Sternenhimmel Animation ===
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    // Stern-Klasse
+    class Star {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.speed = this.size * 0.3;
+        this.alpha = Math.random() * 0.5 + 0.5;
+      }
+
+      update() {
+        this.x -= this.speed;
+        if (this.x < 0) {
+          this.x = width;
+          this.y = Math.random() * height;
+          this.size = Math.random() * 1.5 + 0.5;
+          this.speed = this.size * 0.3;
+          this.alpha = Math.random() * 0.5 + 0.5;
+        }
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+        ctx.shadowColor = 'white';
+        ctx.shadowBlur = 5;
+        ctx.fill();
+      }
+    }
+
+    // Setup Canvas Größe
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Erzeuge Sterne
+    const stars = [];
+    const starCount = 150;
+    for (let i = 0; i < starCount; i++) {
+      stars.push(new Star());
+    }
+
+    // Animation Loop
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      for (const star of stars) {
+        star.update();
+        star.draw();
+      }
+      requestAnimationFrame(animate);
+    }
+
+    animate();
   </script>
 </body>
 </html>
