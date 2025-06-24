@@ -95,7 +95,7 @@
         addHandel();
       } else if (type === 'platform') {
         platform++;
-        addPlatform();
+        addPlatform(player.position.x + 5, player.position.z);
       } else {
         alert('Nicht genug Ressourcen');
         return;
@@ -130,7 +130,7 @@
     scene.add(ambientLight);
 
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
+      new THREE.PlaneGeometry(500, 500),
       new THREE.MeshStandardMaterial({ color: '#228B22' })
     );
     ground.rotation.x = -Math.PI / 2;
@@ -143,13 +143,26 @@
     player.position.y = 0.5;
     scene.add(player);
 
-    function addPlatform() {
+    let velocityY = 0;
+    let isOnGround = true;
+
+    function addPlatform(x, z) {
       const box = new THREE.Mesh(
         new THREE.BoxGeometry(3, 0.3, 3),
         new THREE.MeshStandardMaterial({ color: '#808080' })
       );
-      box.position.set(Math.random()*20-10, 0.15, Math.random()*20-10);
+      box.position.set(x, 0.15, z);
       scene.add(box);
+
+      const trigger = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4),
+        new THREE.MeshStandardMaterial({ color: '#ff0000', transparent: true, opacity: 0.6 })
+      );
+      trigger.position.set(x, 0.8, z);
+      trigger.userData.type = 'labor';
+      scene.add(trigger);
+
+      triggers.push(trigger);
     }
 
     function addSolar() {
@@ -212,11 +225,42 @@
     document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
     document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
+    const triggers = [];
+
     function animate() {
       if (keys['w']) player.position.z -= 0.1;
       if (keys['s']) player.position.z += 0.1;
       if (keys['a']) player.position.x -= 0.1;
       if (keys['d']) player.position.x += 0.1;
+
+      if (keys[' '] && isOnGround) {
+        velocityY = 0.15;
+        isOnGround = false;
+      }
+
+      player.position.y += velocityY;
+      velocityY -= 0.01;
+
+      if (player.position.y <= 0.5) {
+        player.position.y = 0.5;
+        velocityY = 0;
+        isOnGround = true;
+      }
+
+      for (const trigger of triggers) {
+        const dist = player.position.distanceTo(trigger.position);
+        if (dist < 1) {
+          if (trigger.userData.type === 'labor') {
+            labor++;
+            scene.remove(trigger);
+            triggers.splice(triggers.indexOf(trigger), 1);
+            updateUI();
+            playSound();
+            break;
+          }
+        }
+      }
+
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
