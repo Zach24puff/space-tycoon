@@ -84,7 +84,7 @@
       document.getElementById('buyHandel').title = `Handelsstation kaufen (${priceHandel} Energie)`;
     }
 
-    // Drei Kaufkreise als Three.js Sphere Meshes
+    // Drei Kaufkreise als Three.js Circle Meshes
     const buyCircles = [];
 
     // Szene, Kamera, Renderer
@@ -92,7 +92,8 @@
     scene.background = new THREE.Color('#87ceeb'); // blauer Himmel
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 15, 25);
+    camera.position.set(20, 25, 35);
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -120,10 +121,11 @@
     platformMesh.position.y = 0;
     groundGroup.add(platformMesh);
 
-    // Grasrand 10m breit
+    // Grasrand 10m breit an den Rändern
     const grassWidth = 10;
     const grassColor = '#228B22';
 
+    // Gras am Rand als vier Streifen
     const grassFront = new THREE.Mesh(
       new THREE.PlaneGeometry(100, grassWidth),
       new THREE.MeshStandardMaterial({ color: grassColor })
@@ -158,6 +160,10 @@
 
     scene.add(groundGroup);
 
+    // GridHelper zum besseren Überblick (100x100)
+    const gridHelper = new THREE.GridHelper(100, 20, 0x444444, 0x888888);
+    scene.add(gridHelper);
+
     // Spieler als Würfel
     const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
     const playerMaterial = new THREE.MeshStandardMaterial({ color: '#ff69b4' });
@@ -181,7 +187,7 @@
     createBuyCircle(8, 5, '#ffff00', 'labor');
     createBuyCircle(11, 5, '#cc00ff', 'handel');
 
-    // Preise erhöhen sich nach jedem Kauf (für Solar/Labor um 100 Credits, Handel um 250 Energie)
+    // Preise erhöhen sich nach jedem Kauf (Solar/Labor +100 Credits, Handel +250 Energie)
     function buy(type) {
       if (type === 'solar') {
         if (credits >= priceSolar) {
