@@ -32,16 +32,6 @@
       font-size: 1.2em;
     }
 
-    .circle-trigger {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(0, 255, 204, 0.6);
-      box-shadow: 0 0 10px rgba(0, 255, 204, 0.9);
-      pointer-events: none;
-    }
-
     #languageSelect {
       position: fixed;
       top: 10px;
@@ -54,6 +44,10 @@
       border-radius: 5px;
       padding: 5px;
     }
+
+    canvas {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -65,57 +59,80 @@
   </select>
 
   <div id="ui">
-    <h1 id="title" style="font-size: 1.5em;">🚀 Space Station Tycoon</h1>
+    <h1 id="title">🚀 Space Station Tycoon</h1>
     <div>💰 <span id="labelCredits">Credits</span>: <span id="credits">200</span></div>
     <div>🔬 <span id="labelLabor">Labor</span>: <span id="labor">0</span></div>
     <div>🏪 <span id="labelHandel">Handelsstation</span>: <span id="handel">0</span></div>
     <div>🔋 <span id="labelSolar">Solarpanels</span>: <span id="solar">0</span></div>
-    <div>🪐 <span id="labelPlatform">Plattformen</span>: <span id="platform">1</span> (100x100 gehört dir)</div>
+    <div>🪐 <span id="labelPlatform">Plattformen</span>: <span id="platform">1</span></div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 20, 30);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const platformGeo = new THREE.PlaneGeometry(100, 100);
+    const platformMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    const platform = new THREE.Mesh(platformGeo, platformMat);
+    platform.rotation.x = -Math.PI / 2;
+    scene.add(platform);
+
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(10, 30, 10);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
+
+    const playerGeo = new THREE.BoxGeometry(1, 2, 1);
+    const playerMat = new THREE.MeshStandardMaterial({ color: 0xff5500 });
+    const player = new THREE.Mesh(playerGeo, playerMat);
+    player.position.y = 1;
+    scene.add(player);
+
+    const keys = {};
+    document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    let velocityY = 0;
+    let isOnGround = true;
+
+    function movePlayer() {
+      const speed = 0.3;
+      if(keys['w']) player.position.z -= speed;
+      if(keys['s']) player.position.z += speed;
+      if(keys['a']) player.position.x -= speed;
+      if(keys['d']) player.position.x += speed;
+
+      if(keys[' '] && isOnGround) {
+        velocityY = 0.15;
+        isOnGround = false;
+      }
+
+      player.position.y += velocityY;
+      velocityY -= 0.01;
+
+      if(player.position.y <= 1) {
+        player.position.y = 1;
+        velocityY = 0;
+        isOnGround = true;
+      }
+    }
+
     const uiFields = ['credits', 'labor', 'handel', 'solar', 'platform'];
-    const state = {
-      credits: 200,
-      labor: 0,
-      handel: 0,
-      solar: 0,
-      platform: 1
-    };
+    const state = { credits: 200, labor: 0, handel: 0, solar: 0, platform: 1 };
 
     const translations = {
-      de: {
-        title: '🚀 Space Station Tycoon',
-        credits: 'Credits',
-        labor: 'Labor',
-        handel: 'Handelsstation',
-        solar: 'Solarpanels',
-        platform: 'Plattformen'
-      },
-      en: {
-        title: '🚀 Space Station Tycoon',
-        credits: 'Credits',
-        labor: 'Lab',
-        handel: 'Trade Hub',
-        solar: 'Solar Panels',
-        platform: 'Platforms'
-      },
-      fr: {
-        title: '🚀 Tycoon de Station Spatiale',
-        credits: 'Crédits',
-        labor: 'Laboratoire',
-        handel: 'Centre Commercial',
-        solar: 'Panneaux Solaires',
-        platform: 'Plates-formes'
-      },
-      es: {
-        title: '🚀 Magnate de la Estación Espacial',
-        credits: 'Créditos',
-        labor: 'Laboratorio',
-        handel: 'Centro Comercial',
-        solar: 'Paneles Solares',
-        platform: 'Plataformas'
-      }
+      de: { title: '🚀 Space Station Tycoon', credits: 'Credits', labor: 'Labor', handel: 'Handelsstation', solar: 'Solarpanels', platform: 'Plattformen' },
+      en: { title: '🚀 Space Station Tycoon', credits: 'Credits', labor: 'Lab', handel: 'Trade Hub', solar: 'Solar Panels', platform: 'Platforms' },
+      fr: { title: '🚀 Tycoon de Station Spatiale', credits: 'Crédits', labor: 'Laboratoire', handel: 'Centre Commercial', solar: 'Panneaux Solaires', platform: 'Plates-formes' },
+      es: { title: '🚀 Magnate de la Estación Espacial', credits: 'Créditos', labor: 'Laboratorio', handel: 'Centro Comercial', solar: 'Paneles Solares', platform: 'Plataformas' }
     };
 
     function updateUI() {
@@ -140,12 +157,25 @@
     });
 
     setInterval(() => {
-      state.credits += 10;
+      state.credits += state.solar * 100 + state.labor * 50 + state.handel * 150;
       updateUI();
     }, 1000);
 
+    function animate() {
+      requestAnimationFrame(animate);
+      movePlayer();
+      renderer.render(scene, camera);
+    }
+
+    animate();
     updateUI();
     setLanguage('de');
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
