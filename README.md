@@ -106,15 +106,15 @@
   <div class="container" role="main">
     <h1>🚀 Space Station Tycoon.io</h1>
     <div class="stats" aria-live="polite">
-      ⚡ Energie: <span id="energie">0</span> |
+      ⚡ Energie: <span id="energie">10</span> |
       💰 Credits: <span id="credits">0</span> |
-      🔬 Forschung: <span id="forschung">0</span>
+      🔬 Forschung: <span id="forschung">1000</span>
     </div>
 
     <div class="module">
       <button class="btn" onclick="build('solar')">🔋 Solarpanel (100💰)</button>
       <button class="btn" onclick="build('handel')">🏪 Handelsstation (250⚡)</button>
-      <button class="btn" onclick="build('labor')">🧪 Labor (500💰)</button>
+      <button class="btn" onclick="build('labor')">🧪 Labor (50💰)</button>
     </div>
 
     <div class="module">
