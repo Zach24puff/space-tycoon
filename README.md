@@ -60,9 +60,9 @@
 
     const platforms = [];
     const totalBuyables = 1500;
-    const perPlatform = Math.floor(totalBuyables / 3);
+    const perPlatform = Math.floor(totalBuyables / 2);
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const platformGeo = new THREE.PlaneGeometry(1500, 1500);
       const platformMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
       const platform = new THREE.Mesh(platformGeo, platformMat);
@@ -70,6 +70,29 @@
       platform.position.set(i * 1600, 0, 0);
       scene.add(platform);
       platforms.push(platform);
+    }
+
+    const player = new THREE.Mesh(
+      new THREE.CircleGeometry(20, 32),
+      new THREE.MeshBasicMaterial({ color: 0xff5500 })
+    );
+    player.position.set(0, 1, 0);
+    scene.add(player);
+
+    const keys = {};
+    document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    function movePlayer() {
+      const speed = 5;
+      if (keys['w'] || keys['arrowup']) player.position.z -= speed;
+      if (keys['s'] || keys['arrowdown']) player.position.z += speed;
+      if (keys['a'] || keys['arrowleft']) player.position.x -= speed;
+      if (keys['d'] || keys['arrowright']) player.position.x += speed;
+
+      camera.position.x = player.position.x;
+      camera.position.z = player.position.z;
+      camera.lookAt(player.position.x, 0, player.position.z);
     }
 
     const buyables = [];
@@ -106,9 +129,10 @@
     function checkBuys() {
       buyables.forEach((item) => {
         if (!item.userData.bought) {
-          const dx = item.position.x;
-          const dz = item.position.z;
-          if (Math.abs(dx) < 20 && Math.abs(dz) < 20) {
+          const dx = player.position.x - item.position.x;
+          const dz = player.position.z - item.position.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist < 20) {
             const cost = item.userData.type === 'solar' ? 100 : 300;
             if (state.credits >= cost) {
               state.credits -= cost;
@@ -132,6 +156,7 @@
 
     function animate() {
       requestAnimationFrame(animate);
+      movePlayer();
       checkBuys();
       renderer.render(scene, camera);
     }
