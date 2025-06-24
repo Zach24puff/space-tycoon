@@ -3,21 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Space Station Tycoon.io</title>
+  <title>3D Space Station Tycoon</title>
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
+    body, html {
+      margin: 0; padding: 0; overflow: hidden;
       background: #000;
+      font-family: Arial, sans-serif;
       color: white;
       user-select: none;
     }
-    canvas {
-      display: block;
-      background: linear-gradient(to bottom, #000010, #001130);
-    }
-    .ui {
+    #ui {
       position: absolute;
       top: 10px; left: 10px;
       background: rgba(0,0,0,0.75);
@@ -25,212 +20,186 @@
       border-radius: 10px;
       box-shadow: 0 0 10px #00ffcc;
       z-index: 10;
+      width: 180px;
     }
-    .ui h1 {
+    #ui h1 {
       color: #00ffcc;
-      font-size: 20px;
       margin: 0 0 10px 0;
+      font-size: 20px;
     }
-    .btn {
-      display: block;
-      margin: 5px 0;
-      padding: 8px;
-      background: #111;
-      border: 1px solid #00ffcc;
-      border-radius: 6px;
-      color: white;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .btn:hover {
+    #buyButton3d {
+      position: absolute;
+      bottom: 30px;
+      right: 30px;
+      width: 60px; height: 60px;
+      border-radius: 50%;
       background: #00ffcc;
-      color: #000;
+      box-shadow: 0 0 15px #00ffcc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 32px;
+      color: black;
+      user-select: none;
+      z-index: 20;
+      transition: background 0.3s;
     }
-    .stats {
-      margin-bottom: 10px;
+    #buyButton3d:hover {
+      background: #00aaaa;
+      box-shadow: 0 0 20px #00aaaa;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-
-  <div class="ui">
-    <h1>🚀 Space Station Tycoon</h1>
-    <div class="stats">
-      💰 Credits: <span id="credits">0</span>
-    </div>
-    <button class="btn" onclick="buyModule()">🛰️ Modul kaufen (100 Credits)</button>
+  <div id="ui">
+    <h1>🚀 3D Space Station Tycoon</h1>
+    <div>💰 Credits: <span id="credits">200</span></div>
     <div>Module: <span id="moduleCount">0</span></div>
   </div>
 
+  <div id="buyButton3d" title="Kaufe Modul (+50 Credits/sec)">+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/PointerLockControls.js"></script>
+
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let width, height;
+    // Szene, Kamera, Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000011);
 
-    function resizeCanvas() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width;
-      canvas.height = height;
-      buyButton.x = width - 60; // Update Button Position on resize
-      buyButton.y = height - 60;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 10);
 
-    // Game state
-    let credits = 200; // Startkapital 200 Credits
-    let modules = 0;
+    const renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    const player = {
-      x: 100,
-      y: 300,
-      width: 40,
-      height: 60,
-      color: '#00ffcc',
-      dx: 0,
-      dy: 0,
-      onGround: true,
-    };
+    // Licht
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
 
-    const platform = {
-      x: 0,
-      y: 400,
-      width: 10000,
-      height: 50,
-      color: '#444',
-    };
+    const dirLight = new THREE.DirectionalLight(0x00ffcc, 1);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
 
-    // WASD controls
+    // Boden (Plattform)
+    const floorGeometry = new THREE.PlaneGeometry(100, 100);
+    const floorMaterial = new THREE.MeshStandardMaterial({color: 0x222244});
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0;
+    scene.add(floor);
+
+    // Spieler als Box
+    const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
+    const playerMaterial = new THREE.MeshStandardMaterial({color: 0x00ffcc});
+    const player = new THREE.Mesh(playerGeometry, playerMaterial);
+    player.position.set(0, 1, 0);
+    scene.add(player);
+
+    // Controls
     const keys = {};
-    document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    document.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+    document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-    // Kauf-Kreis Button
-    const buyButton = {
-      x: window.innerWidth - 60,
-      y: window.innerHeight - 60,
-      radius: 30,
-      color: '#00ffcc',
-      hoverColor: '#00aaaa',
-      isHover: false,
-    };
+    // Spieler Variablen
+    let velocity = new THREE.Vector3();
+    let direction = new THREE.Vector3();
+    let canJump = false;
 
-    // Mausposition tracken
-    const mouse = { x: 0, y: 0 };
-    window.addEventListener('mousemove', e => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      const dx = mouse.x - buyButton.x;
-      const dy = mouse.y - buyButton.y;
-      buyButton.isHover = (dx*dx + dy*dy) <= (buyButton.radius * buyButton.radius);
-      canvas.style.cursor = buyButton.isHover ? 'pointer' : 'default';
-    });
+    // Physik Parameter
+    const GRAVITY = 0.5;
+    const MOVE_SPEED = 0.1;
+    const JUMP_SPEED = 0.2;
 
-    // Klick auf Canvas für Kaufbutton
-    canvas.addEventListener('click', () => {
-      if (buyButton.isHover) {
-        buyModule();
-      }
-    });
+    // Spielzustand
+    let credits = 200;
+    let modules = 0;
+    let creditsPerSecond = 10;
 
-    // Funktion Module kaufen
-    function buyModule() {
+    // UI update
+    function updateUI() {
+      document.getElementById('credits').innerText = credits.toFixed(0);
+      document.getElementById('moduleCount').innerText = modules;
+    }
+    updateUI();
+
+    // Kaufen Button
+    const buyButton = document.getElementById('buyButton3d');
+    buyButton.addEventListener('click', () => {
       if (credits >= 100) {
         credits -= 100;
         modules++;
+        creditsPerSecond = 10 + (modules - 1) * 50;
         updateUI();
       }
-    }
+    });
 
-    // Geld pro Sekunde dazu
-    function addCredits() {
-      let base = 10;
-      if (modules > 1) {
-        base = 10 + (modules - 1) * 50;
-      }
-      credits += base;
+    // Credits jede Sekunde erhöhen
+    setInterval(() => {
+      credits += creditsPerSecond;
       updateUI();
+    }, 1000);
+
+    // Resize Handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Simple Kollisions-Check Boden
+    function checkGround() {
+      if (player.position.y <= 1) {
+        player.position.y = 1;
+        velocity.y = 0;
+        canJump = true;
+      } else {
+        canJump = false;
+      }
     }
-    setInterval(addCredits, 1000);
 
-    // UI aktualisieren
-    function updateUI() {
-      document.getElementById('credits').innerText = credits;
-      document.getElementById('moduleCount').innerText = modules;
-    }
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
 
-    // Spiel Logik & Zeichnung
-    function update() {
-      // Bewegung Spieler
-      if (keys['a']) player.dx = -2;
-      else if (keys['d']) player.dx = 2;
-      else player.dx = 0;
+      // Bewegung
+      direction.set(0, 0, 0);
+      if (keys['w']) direction.z -= 1;
+      if (keys['s']) direction.z += 1;
+      if (keys['a']) direction.x -= 1;
+      if (keys['d']) direction.x += 1;
 
-      if (keys['w'] && player.onGround) {
-        player.dy = -8;
-        player.onGround = false;
+      direction.normalize();
+
+      // Bewegungsgeschwindigkeit
+      player.position.x += direction.x * MOVE_SPEED;
+      player.position.z += direction.z * MOVE_SPEED;
+
+      // Schwerkraft
+      velocity.y -= GRAVITY * 0.02;
+      player.position.y += velocity.y;
+
+      // Bodencheck
+      checkGround();
+
+      // Springen
+      if (keys['w'] && canJump) {
+        velocity.y = JUMP_SPEED;
+        canJump = false;
       }
 
-      player.x += player.dx;
-      player.dy += 0.4; // Gravitation
-      player.y += player.dy;
+      // Kamera folgt Spieler
+      camera.position.x = player.position.x;
+      camera.position.z = player.position.z + 10;
+      camera.position.y = player.position.y + 5;
+      camera.lookAt(player.position);
 
-      // Plattform-Kollision
-      if (player.y + player.height > platform.y) {
-        player.y = platform.y - player.height;
-        player.dy = 0;
-        player.onGround = true;
-      }
-
-      // Hintergrund löschen
-      ctx.clearRect(0, 0, width, height);
-
-      // Plattform zeichnen
-      ctx.fillStyle = platform.color;
-      ctx.fillRect(platform.x - player.x + width / 2 - player.width / 2, platform.y, platform.width, platform.height);
-
-      // Module als kleine Quadrate
-      for (let i = 0; i < modules; i++) {
-        ctx.fillStyle = "#00ffcc";
-        ctx.fillRect(width / 2 - player.width / 2 + i * 60, platform.y - 40, 40, 40);
-      }
-
-      // Spieler zeichnen
-      ctx.fillStyle = player.color;
-      ctx.fillRect(width / 2 - player.width / 2, player.y, player.width, player.height);
-
-      // Kauf-Button zeichnen
-      drawBuyButton();
-
-      requestAnimationFrame(update);
+      renderer.render(scene, camera);
     }
 
-    // Kauf-Button zeichnen (Kreis mit Plus)
-    function drawBuyButton() {
-      ctx.save();
-      ctx.beginPath();
-      ctx.fillStyle = buyButton.isHover ? buyButton.hoverColor : buyButton.color;
-      ctx.shadowColor = buyButton.color;
-      ctx.shadowBlur = 15;
-      ctx.arc(buyButton.x, buyButton.y, buyButton.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Plus Zeichen
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(buyButton.x - 10, buyButton.y);
-      ctx.lineTo(buyButton.x + 10, buyButton.y);
-      ctx.moveTo(buyButton.x, buyButton.y - 10);
-      ctx.lineTo(buyButton.x, buyButton.y + 10);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    updateUI();
-    update();
+    animate();
   </script>
 </body>
 </html>
