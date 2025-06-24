@@ -1,137 +1,75 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Space Station Tycoon 3D Anime Style</title>
-  <style>
-    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
-    #ui {
-      position: absolute;
-      top: 10px; left: 10px;
-      background: rgba(0,0,0,0.75);
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #00ffcc;
-      z-index: 10;
-      color: white;
-      user-select: none;
-    }
-    .circle-button {
-      position: absolute;
-      width: 60px; height: 60px;
-      border-radius: 50%;
-      background: #00ffcc;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px; color: black; font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 0 10px #00ffcc;
-      transition: 0.2s;
-    }
-    .circle-button:hover {
-      background: #00aaaa;
-      box-shadow: 0 0 15px #00aaaa;
-    }
-    #buySolar { bottom: 30px; right: 30px; }
-    #buyLabor { bottom: 100px; right: 30px; }
-    #buyHandel { bottom: 170px; right: 30px; }
-    #buyPlatform { bottom: 240px; right: 30px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Space Station Tycoon 3D - Komplett</title>
+<style>
+  body {
+    margin: 0; overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #87ceeb; /* blauer Himmel */
+    color: white;
+  }
+  #ui {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: rgba(0,0,0,0.75);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #00ffcc;
+    z-index: 10;
+    font-size: 14px;
+    line-height: 1.4;
+    user-select: none;
+    max-width: 300px;
+  }
+  #ui table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  #ui th, #ui td {
+    border: 1px solid #00ffcc;
+    padding: 6px 10px;
+    text-align: left;
+  }
+  #ui th {
+    background-color: #00ffcc;
+    color: #000;
+  }
+  #buyHelp {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #00ffcc;
+  }
+</style>
 </head>
 <body>
   <div id="ui">
-    <h1>🚀 Space Station Tycoon</h1>
-    <div>💰 Credits: <span id="credits">200</span></div>
-    <div>🔬 Labor: <span id="labor">0</span></div>
-    <div>🏪 Handelsstation: <span id="handel">0</span></div>
-    <div>🔋 Solarpanels: <span id="solar">0</span></div>
-    <div>🪐 Plattformen: <span id="platform">0</span></div>
-    <div>⭐ Level: <span id="level">1</span> (XP: <span id="xp">0</span>)</div>
+    <table>
+      <thead><tr><th>Ressource</th><th>Anzahl</th><th>Preis (nächst)</th></tr></thead>
+      <tbody>
+        <tr><td>💰 Credits</td><td id="credits">200</td><td>-</td></tr>
+        <tr><td>🔬 Labor</td><td id="labor">0</td><td>100</td></tr>
+        <tr><td>🏪 Handelsstation</td><td id="handel">0</td><td>250 Energie</td></tr>
+        <tr><td>🔋 Solarpanels</td><td id="solar">0</td><td id="solarPrice">100</td></tr>
+        <tr><td>🪐 Plattformen</td><td id="platform">0</td><td>0</td></tr>
+        <tr><td>🚪 Türen</td><td id="doors">0</td><td id="doorPrice">50</td></tr>
+        <tr><td>🪟 Fenster</td><td id="windows">0</td><td id="windowPrice">30</td></tr>
+        <tr><td>🏠 Dächer</td><td id="roofs">0</td><td id="roofPrice">80</td></tr>
+      </tbody>
+    </table>
+    <div id="buyHelp">Über die Kreise laufen, um zu kaufen</div>
   </div>
-
-  <div id="buySolar" class="circle-button" onclick="buy('solar')">🔋</div>
-  <div id="buyLabor" class="circle-button" onclick="buy('labor')">🧪</div>
-  <div id="buyHandel" class="circle-button" onclick="buy('handel')">🏪</div>
-  <div id="buyPlatform" class="circle-button" onclick="buy('platform')">🪐</div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+
   <script>
-    // Ressourcen & Level
-    let credits = 200;
-    let energy = 1000;
-    let solar = 0;
-    let labor = 0;
-    let handel = 0;
-    let platform = 0;
-    let xp = 0;
-    let level = 1;
-
-    // Level XP für nächste Stufe
-    function xpForNextLevel(lv) {
-      return lv * lv * 50;
-    }
-
-    // UI update
-    function updateUI() {
-      document.getElementById('credits').innerText = credits;
-      document.getElementById('labor').innerText = labor;
-      document.getElementById('handel').innerText = handel;
-      document.getElementById('solar').innerText = solar;
-      document.getElementById('platform').innerText = platform;
-      document.getElementById('xp').innerText = xp;
-      document.getElementById('level').innerText = level;
-    }
-
-    // Kaufen
-    function buy(type) {
-      if (type === 'solar' && credits >= 100) {
-        credits -= 100;
-        solar++;
-        addSolar();
-        addXP(20);
-      } else if (type === 'labor' && credits >= 100) {
-        credits -= 100;
-        labor++;
-        addLabor();
-        addXP(20);
-      } else if (type === 'handel' && energy >= 250) {
-        energy -= 250;
-        handel++;
-        addHandel();
-        addXP(30);
-      } else if (type === 'platform') {
-        platform++;
-        addPlatform(player.position.x + 5, player.position.z);
-        addXP(10);
-      } else {
-        alert('Nicht genug Ressourcen');
-        return;
-      }
-      updateUI();
-      playSound();
-    }
-
-    function addXP(amount) {
-      xp += amount;
-      while (xp >= xpForNextLevel(level)) {
-        xp -= xpForNextLevel(level);
-        level++;
-        alert(`Level Up! Du bist jetzt Level ${level}`);
-      }
-      updateUI();
-    }
-
-    // Ressourcen pro Sekunde
-    setInterval(() => {
-      credits += solar * 10 + labor * 5 + handel * 20;
-      energy += solar * 20;
-      updateUI();
-    }, 1000);
-
-    // Three.js Szene Setup
+    // Szene, Kamera, Renderer
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#87ceeb');
+
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     camera.position.set(0, 5, 10);
 
@@ -143,223 +81,361 @@
     controls.enablePan = false;
 
     // Licht
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 20, 10);
-    scene.add(light);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
 
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
 
-    // Boden
+    // Boden & Plattform
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(500, 500),
-      new THREE.MeshStandardMaterial({ color: '#228B22' })
+      new THREE.MeshStandardMaterial({color: '#228B22'})
     );
-    ground.rotation.x = -Math.PI / 2;
+    ground.rotation.x = -Math.PI/2;
     scene.add(ground);
 
-    // Anime-Stil Spieler-Figur: Kopf, Körper, Arme, Beine
+    const platformGeom = new THREE.BoxGeometry(20, 0.3, 20);
+    const platformMat = new THREE.MeshStandardMaterial({color: '#555555'});
+    const platform = new THREE.Mesh(platformGeom, platformMat);
+    platform.position.y = 0;
+    scene.add(platform);
+
+    // Haus Basis
+    const houseBaseGeom = new THREE.BoxGeometry(6, 3, 6);
+    const houseBaseMat = new THREE.MeshStandardMaterial({color: '#8B4513'});
+    const houseBase = new THREE.Mesh(houseBaseGeom, houseBaseMat);
+    houseBase.position.set(0, 1.5, 0);
+    scene.add(houseBase);
+
+    // Hausobjekte
+    const houseObjects = { doors: [], windows: [], roofs: [] };
+
+    // Spieler aus Bausteinen
     const player = new THREE.Group();
-
-    // Kopf
-    const headGeometry = new THREE.BoxGeometry(1,1,1);
-    const headMaterial = new THREE.MeshStandardMaterial({ color: '#ffccff' });
-    const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.set(0,1.75,0);
-    player.add(head);
-
-    // Körper
-    const bodyGeometry = new THREE.BoxGeometry(1,1.5,0.5);
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: '#ff99cc' });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.set(0,1,0);
+    const bodyGeom = new THREE.BoxGeometry(1, 1.5, 0.5);
+    const bodyMat = new THREE.MeshStandardMaterial({color: '#ff69b4'});
+    const body = new THREE.Mesh(bodyGeom, bodyMat);
+    body.position.y = 1;
     player.add(body);
 
-    // Arme
-    const armGeometry = new THREE.BoxGeometry(0.3,1,0.3);
-    const armMaterial = new THREE.MeshStandardMaterial({ color: '#ff99cc' });
-    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-    leftArm.position.set(-0.65,1,0);
-    player.add(leftArm);
+    const headGeom = new THREE.SphereGeometry(0.5, 16, 16);
+    const headMat = new THREE.MeshStandardMaterial({color: '#ffaaaa'});
+    const head = new THREE.Mesh(headGeom, headMat);
+    head.position.y = 2.5;
+    player.add(head);
 
-    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-    rightArm.position.set(0.65,1,0);
+    const armGeom = new THREE.CylinderGeometry(0.15, 0.15, 1);
+    const armMat = new THREE.MeshStandardMaterial({color: '#ff69b4'});
+    const leftArm = new THREE.Mesh(armGeom, armMat);
+    leftArm.position.set(-0.75, 1.5, 0);
+    leftArm.rotation.z = Math.PI / 8;
+    player.add(leftArm);
+    const rightArm = leftArm.clone();
+    rightArm.position.set(0.75, 1.5, 0);
+    rightArm.rotation.z = -Math.PI / 8;
     player.add(rightArm);
 
-    // Beine
-    const legGeometry = new THREE.BoxGeometry(0.4,1,0.4);
-    const legMaterial = new THREE.MeshStandardMaterial({ color: '#cc6699' });
-    const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-    leftLeg.position.set(-0.3,0,0);
+    const legGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.2);
+    const legMat = new THREE.MeshStandardMaterial({color: '#551a8b'});
+    const leftLeg = new THREE.Mesh(legGeom, legMat);
+    leftLeg.position.set(-0.3, 0.1, 0);
     player.add(leftLeg);
-
-    const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
-    rightLeg.position.set(0.3,0,0);
+    const rightLeg = leftLeg.clone();
+    rightLeg.position.set(0.3, 0.1, 0);
     player.add(rightLeg);
 
-    player.position.set(0,1,0);
+    player.position.y = 1;
     scene.add(player);
 
-    // Variablen für Bewegung & Physik
+    // Ressourcen und Preise
+    let credits = 200;
+    let energy = 1000;
+    let solar = 0;
+    let labor = 0;
+    let handel = 0;
+    let platformsBuilt = 0;
+    let doorsCount = 0;
+    let windowsCount = 0;
+    let roofsCount = 0;
+
+    let solarPrice = 100;
+    let doorPrice = 50;
+    let windowPrice = 30;
+    let roofPrice = 80;
+
+    let creditsPerSecond = 0;
+    const maxParts = 700;
+
+    // Sprung & Gravitation
     let velocityY = 0;
     let isOnGround = true;
-    const gravity = -0.02;
-    const jumpStrength = 0.4;
-    const moveSpeed = 0.15;
-
-    // Gebäude (Häuser) - begehbar
-    const houses = [];
-
-    function createHouse(x,z) {
-      const house = new THREE.Group();
-
-      // Wände
-      const wallsGeom = new THREE.BoxGeometry(3,3,3);
-      const wallsMat = new THREE.MeshStandardMaterial({color:'#8B4513'});
-      const walls = new THREE.Mesh(wallsGeom, wallsMat);
-      walls.position.y = 1.5;
-      house.add(walls);
-
-      // Dach
-      const roofGeom = new THREE.ConeGeometry(2.5,1,4);
-      const roofMat = new THREE.MeshStandardMaterial({color:'#A0522D'});
-      const roof = new THREE.Mesh(roofGeom, roofMat);
-      roof.position.y = 3.5;
-      roof.rotation.y = Math.PI / 4;
-      house.add(roof);
-
-      house.position.set(x,0,z);
-      scene.add(house);
-
-      // Tür als Box für Kollision
-      const door = {
-        xMin: x - 0.5,
-        xMax: x + 0.5,
-        zMin: z + 1.5,
-        zMax: z + 2.5,
-        entered: false
-      };
-      houses.push(door);
-    }
-
-    // Erzeuge ein paar Häuser
-    for(let i=0; i<5; i++) {
-      createHouse(Math.random()*50-25, Math.random()*50-25);
-    }
 
     // Steuerung
     const keys = {};
     document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
     document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-    // Begehbares Haus-Check
-    let insideHouse = false;
-    function checkHouseEntry() {
-      insideHouse = false;
-      for (const door of houses) {
-        if (player.position.x > door.xMin && player.position.x < door.xMax &&
-            player.position.z > door.zMin && player.position.z < door.zMax) {
-          if(!door.entered) {
-            alert("Du bist ins Haus eingetreten!");
-            door.entered = true;
-          }
-          insideHouse = true;
-          break;
+    // Kaufkreise
+    const buyCircles = [];
+
+    function createBuyCircle(x, z, color, type, cost, priceId=null) {
+      const geom = new THREE.CircleGeometry(0.5, 32);
+      const mat = new THREE.MeshBasicMaterial({color: color, opacity: 0.6, transparent: true});
+      const circle = new THREE.Mesh(geom, mat);
+      circle.rotation.x = -Math.PI / 2;
+      circle.position.set(x, 0.15, z);
+      circle.userData = { type, cost, priceId };
+      scene.add(circle);
+      buyCircles.push(circle);
+    }
+
+    // Kaufkreise setzen
+    createBuyCircle(-6, -6, '#00ffff', 'solar', solarPrice, 'solarPrice');
+    createBuyCircle(-3, -6, '#ffcc00', 'labor', 100);
+    createBuyCircle(0, -6, '#cc00ff', 'handel', 250);
+    createBuyCircle(3, -6, '#777777', 'platform', 0);
+
+    createBuyCircle(-6, 6, '#654321', 'door', doorPrice, 'doorPrice');
+    createBuyCircle(-3, 6, '#aaddff', 'window', windowPrice, 'windowPrice');
+    createBuyCircle(0, 6, '#aa3333', 'roof', roofPrice, 'roofPrice');
+
+    // Objekte-Arrays
+    const solarModules = [];
+    const laborModules = [];
+    const handelModules = [];
+    const platforms = [];
+
+    // Kauf-Funktion
+    function tryBuy(circle) {
+      const { type, cost, priceId } = circle.userData;
+      const totalParts = solar + labor + handel + platformsBuilt + doorsCount + windowsCount + roofsCount;
+      if(totalParts >= maxParts){
+        alert(`Maximale Anzahl an Teilen (${maxParts}) erreicht!`);
+        return;
+      }
+
+      if(type === 'solar'){
+        if(credits >= solarPrice){
+          credits -= solarPrice;
+          solar++;
+          creditsPerSecond += 100;
+          solarPrice += 100;
+          circle.userData.cost = solarPrice;
+          if(priceId) document.getElementById(priceId).innerText = solarPrice;
+          addSolarModule();
+          playSound();
         }
       }
+      else if(type === 'labor'){
+        if(credits >= cost){
+          credits -= cost;
+          labor++;
+          creditsPerSecond += 100;
+          addLaborModule();
+          playSound();
+        }
+      }
+      else if(type === 'handel'){
+        if(energy >= cost){
+          energy -= cost;
+          handel++;
+          creditsPerSecond += 100;
+          addHandelModule();
+          playSound();
+        }
+      }
+      else if(type === 'platform'){
+        platformsBuilt++;
+        creditsPerSecond += 100;
+        addPlatform(player.position.x + 5, player.position.z);
+        playSound();
+      }
+      else if(type === 'door'){
+        if(credits >= doorPrice){
+          credits -= doorPrice;
+          doorsCount++;
+          creditsPerSecond += 100;
+          doorPrice += 50;
+          circle.userData.cost = doorPrice;
+          if(priceId) document.getElementById(priceId).innerText = doorPrice;
+          addDoor();
+          playSound();
+        }
+      }
+      else if(type === 'window'){
+        if(credits >= windowPrice){
+          credits -= windowPrice;
+          windowsCount++;
+          creditsPerSecond += 100;
+          windowPrice += 50;
+          circle.userData.cost = windowPrice;
+          if(priceId) document.getElementById(priceId).innerText = windowPrice;
+          addWindow();
+          playSound();
+        }
+      }
+      else if(type === 'roof'){
+        if(credits >= roofPrice){
+          credits -= roofPrice;
+          roofsCount++;
+          creditsPerSecond += 100;
+          roofPrice += 50;
+          circle.userData.cost = roofPrice;
+          if(priceId) document.getElementById(priceId).innerText = roofPrice;
+          addRoof();
+          playSound();
+        }
+      }
+
+      updateUI();
     }
 
-    // Kaufen Gebäude / Module
-    const triggers = [];
-    function addPlatform(x, z) {
-      const box = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 0.3, 3),
-        new THREE.MeshStandardMaterial({ color: '#808080' })
-      );
-      box.position.set(x, 0.15, z);
-      scene.add(box);
-
-      // Beispiel-Trigger (optional)
-      const trigger = new THREE.Mesh(
-        new THREE.SphereGeometry(0.4),
-        new THREE.MeshStandardMaterial({ color: '#ff0000', transparent: true, opacity: 0.6 })
-      );
-      trigger.position.set(x, 0.8, z);
-      trigger.userData.type = 'labor';
-      scene.add(trigger);
-      triggers.push(trigger);
-    }
-
-    function addSolar() {
+    // Objekt hinzufügen
+    function addSolarModule() {
       const obj = new THREE.Mesh(
         new THREE.CylinderGeometry(0.3, 0.3, 2),
-        new THREE.MeshStandardMaterial({ color: '#00ffff' })
+        new THREE.MeshStandardMaterial({color: '#00ffff'})
       );
-      obj.position.set(Math.random()*20-10, 1, Math.random()*20-10);
+      obj.position.set(Math.random()*18-9, 1, Math.random()*18-9);
       scene.add(obj);
+      solarModules.push(obj);
     }
-
-    function addLabor() {
+    function addLaborModule() {
       const obj = new THREE.Mesh(
         new THREE.BoxGeometry(1, 2, 1),
-        new THREE.MeshStandardMaterial({ color: '#ffcc00' })
+        new THREE.MeshStandardMaterial({color: '#ffcc00'})
       );
-      obj.position.set(Math.random()*20-10, 1, Math.random()*20-10);
+      obj.position.set(Math.random()*18-9, 1, Math.random()*18-9);
       scene.add(obj);
+      laborModules.push(obj);
     }
-
-    function addHandel() {
+    function addHandelModule() {
       const obj = new THREE.Mesh(
         new THREE.BoxGeometry(2, 2, 2),
-        new THREE.MeshStandardMaterial({ color: '#cc00ff' })
+        new THREE.MeshStandardMaterial({color: '#cc00ff'})
       );
-      obj.position.set(Math.random()*20-10, 1, Math.random()*20-10);
+      obj.position.set(Math.random()*18-9, 1, Math.random()*18-9);
       scene.add(obj);
+      handelModules.push(obj);
+    }
+    function addPlatform(x,z){
+      const obj = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 0.3, 4),
+        new THREE.MeshStandardMaterial({color: '#777777'})
+      );
+      obj.position.set(x, 0.15, z);
+      scene.add(obj);
+      platforms.push(obj);
     }
 
-    // Spielsound bei Kauf
-    function playSound() {
+    function addDoor(){
+      const doorGeom = new THREE.BoxGeometry(1, 2, 0.2);
+      const doorMat = new THREE.MeshStandardMaterial({color: '#654321'});
+      const door = new THREE.Mesh(doorGeom, doorMat);
+      door.position.set(0, 1, 3.1);
+      scene.add(door);
+      houseObjects.doors.push(door);
+    }
+    function addWindow(){
+      const winGeom = new THREE.PlaneGeometry(1.5, 1.5);
+      const winMat = new THREE.MeshStandardMaterial({color: '#aaddff', opacity: 0.7, transparent: true});
+      const window = new THREE.Mesh(winGeom, winMat);
+      window.position.set(-3.1, 1.5, 0);
+      window.rotation.y = Math.PI / 2;
+      scene.add(window);
+      houseObjects.windows.push(window);
+    }
+    function addRoof(){
+      const roofGeom = new THREE.ConeGeometry(4.5, 2, 4);
+      const roofMat = new THREE.MeshStandardMaterial({color: '#aa3333'});
+      const roof = new THREE.Mesh(roofGeom, roofMat);
+      roof.position.set(0, 3.5, 0);
+      roof.rotation.y = Math.PI / 4;
+      scene.add(roof);
+      houseObjects.roofs.push(roof);
+    }
+
+    // UI Update
+    function updateUI(){
+      document.getElementById('credits').innerText = credits;
+      document.getElementById('labor').innerText = labor;
+      document.getElementById('handel').innerText = handel;
+      document.getElementById('solar').innerText = solar;
+      document.getElementById('platform').innerText = platformsBuilt;
+      document.getElementById('doors').innerText = doorsCount;
+      document.getElementById('windows').innerText = windowsCount;
+      document.getElementById('roofs').innerText = roofsCount;
+
+      document.getElementById('solarPrice').innerText = solarPrice;
+      document.getElementById('doorPrice').innerText = doorPrice;
+      document.getElementById('windowPrice').innerText = windowPrice;
+      document.getElementById('roofPrice').innerText = roofPrice;
+    }
+
+    // Credits & Energie automatisch erhöhen
+    setInterval(() => {
+      credits += creditsPerSecond;
+      energy += solar * 20;
+      updateUI();
+    }, 1000);
+
+    // Sound beim Kauf
+    function playSound(){
       const audio = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_6efb4b5c60.mp3?filename=menu-click-110818.mp3");
       audio.play();
     }
 
-    // Haupt-Animation & Bewegung
-    function animate() {
-      // Bewegung
-      if (keys['w']) player.position.z -= moveSpeed;
-      if (keys['s']) player.position.z += moveSpeed;
-      if (keys['a']) player.position.x -= moveSpeed;
-      if (keys['d']) player.position.x += moveSpeed;
+    // Spieler- und Kaufkreis-Kollision (automatisches Kaufen beim Überlaufen)
+    function checkBuyCircles(){
+      for(const circle of buyCircles){
+        const dist = player.position.distanceTo(circle.position);
+        if(dist < 1){ // Radius ca 1
+          tryBuy(circle);
+        }
+      }
+    }
 
-      // Springen
-      if (keys[' '] && isOnGround) {
-        velocityY = jumpStrength;
+    // Animation & Bewegung
+    function animate(){
+      const moveSpeed = 0.1;
+      if(keys['w']) player.position.z -= moveSpeed;
+      if(keys['s']) player.position.z += moveSpeed;
+      if(keys['a']) player.position.x -= moveSpeed;
+      if(keys['d']) player.position.x += moveSpeed;
+
+      // Springen & Gravitation
+      if(keys[' '] && isOnGround){
+        velocityY = 0.15;
         isOnGround = false;
       }
-      player.position.y += velocityY;
-      velocityY += gravity;
 
-      if (player.position.y <= 1) {
+      velocityY -= 0.01; // Gravitation
+      player.position.y += velocityY;
+      if(player.position.y <= 1){
         player.position.y = 1;
         velocityY = 0;
         isOnGround = true;
       }
 
-      checkHouseEntry();
+      checkBuyCircles();
+
+      controls.target.copy(player.position);
+      controls.update();
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
+
     animate();
 
-    // Fenster-Resize
+    // Fenstergröße anpassen
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth/window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
-
-    updateUI();
   </script>
 </body>
 </html>
