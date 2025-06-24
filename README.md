@@ -17,14 +17,8 @@
     color: white;
     font-family: Arial, sans-serif;
     width: 220px;
-  }
-  .circle-trigger {
-    position: absolute;
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: rgba(0,255,204,0.6);
-    box-shadow: 0 0 10px rgba(0,255,204,0.9);
-    pointer-events: none;
+    font-weight: bold;
+    font-size: 1.1em;
   }
 </style>
 </head>
@@ -32,34 +26,32 @@
 <div id="ui">
   <h1>🚀 Space Station Tycoon</h1>
   <div>💰 Credits: <span id="credits">200</span></div>
-  <div>🔬 Labor: <span id="labor">0</span></div>
-  <div>🏪 Handelsstation: <span id="handel">0</span></div>
-  <div>🔋 Solarpanels: <span id="solar">0</span></div>
-  <div>🪐 Plattformen: <span id="platform">1</span> (200x200 gehört dir)</div>
+  <div>🏗️ Objekte gekauft: <span id="objects">0</span></div>
+  <div>🔋 Energie (Solarpanels): <span id="solar">0</span></div>
+  <div>🏪 Handelsstationen: <span id="handel">0</span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
 <script>
   let credits = 200;
-  let labor = 0;
-  let handel = 0;
   let solar = 0;
-  let platformCount = 1;
+  let handel = 0;
+  let objectsBought = 0;
 
   let priceSolar = 500;
-  let priceLabor = 400;
   let priceHandel = 1000;
   let priceHouseObj = 300;
   let priceSolarInc = 300;
+  let priceHandelInc = 500;
   let priceHouseObjInc = 200;
 
   // Three.js Setup
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
 
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 40, 50);
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 120, 150);
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({antialias:true});
@@ -69,22 +61,22 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0, 0);
   controls.enablePan = false;
-  controls.minDistance = 10;
-  controls.maxDistance = 100;
+  controls.minDistance = 50;
+  controls.maxDistance = 500;
   controls.update();
 
   // Licht
   const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-  dirLight.position.set(10, 30, 10);
+  dirLight.position.set(100, 200, 100);
   scene.add(dirLight);
 
   const ambLight = new THREE.AmbientLight(0x404040);
   scene.add(ambLight);
 
-  // Plattform 200x200 in 10x10 Bereiche aufgeteilt (je 20x20 Fliesen)
-  const platformSize = 200;
+  // Plattform 1000x1000 in 10x10 Meter Fliesen => 100x100 Fliesen
+  const platformSize = 1000;
   const tileSize = 10;
-  const tilesCount = platformSize / tileSize; // 20
+  const tilesCount = platformSize / tileSize;
 
   const platformTiles = [];
 
@@ -111,35 +103,50 @@
   player.position.y = 1;
   scene.add(player);
 
-  // Kauftrigger: je 1500 zufällige Plätze auf Plattform (ca. 4 pro Tile)
+  // Gekaufte Objekte sichtbar machen
+  const purchasedObjects = [];
+
+  function createPurchasedObject(x, z, type) {
+    let color;
+    if(type === 'solar') color = 0xffff00;
+    else if(type === 'handel') color = 0xff00ff;
+    else color = 0x00ffff; // Hausobjekt oder sonstiges
+
+    const geo = new THREE.BoxGeometry(2, 4, 2);
+    const mat = new THREE.MeshStandardMaterial({color});
+    const obj = new THREE.Mesh(geo, mat);
+    obj.position.set(x, 2, z);
+    scene.add(obj);
+    purchasedObjects.push(obj);
+  }
+
+  // Kauftrigger: 1500 zufällige Kaufpunkte
   const buyTriggers = [];
 
   function addBuyTrigger(x, z, type, tileIndex) {
     const colorMap = {
-      'solar': 0x00ffff,
-      'labor': 0xffff00,
+      'solar': 0xffff00,
       'handel': 0xff00ff,
-      'houseObj': 0x00ffcc
+      'houseObj': 0x00ffff
     };
     const trigger = new THREE.Mesh(
       new THREE.CircleGeometry(0.7, 32),
-      new THREE.MeshBasicMaterial({color: colorMap[type] || 0x00ffcc, transparent:true, opacity: 0.5})
+      new THREE.MeshBasicMaterial({color: colorMap[type] || 0x00ffff, transparent:true, opacity: 0.5})
     );
     trigger.rotation.x = -Math.PI/2;
     trigger.position.set(x, 0.02, z);
     scene.add(trigger);
-    buyTriggers.push({mesh: trigger, type: type, bought:false, tileIndex});
+    buyTriggers.push({mesh: trigger, type: type, bought:false, tileIndex, x, z});
   }
 
-  // 1500 Kauftrigger zufällig auf Plattform verteilt
+  // Verteilt 1500 Kaufpunkte zufällig
   for(let i=0; i<1500; i++) {
     const tileIndex = Math.floor(Math.random()*platformTiles.length);
     const tile = platformTiles[tileIndex];
-    // Random Position leicht innerhalb des Tiles
     const jitter = (tileSize/2 - 1);
     const x = tile.mesh.position.x + (Math.random()*2 -1)*jitter;
     const z = tile.mesh.position.z + (Math.random()*2 -1)*jitter;
-    const types = ['solar','labor','handel'];
+    const types = ['solar','handel','houseObj'];
     const t = types[Math.floor(Math.random()*types.length)];
     addBuyTrigger(x, z, t, tileIndex);
   }
@@ -150,13 +157,12 @@
   document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
   function movePlayer() {
-    const speed = 0.4;
+    const speed = 0.6;
     if(keys['w']) player.position.z -= speed;
     if(keys['s']) player.position.z += speed;
     if(keys['a']) player.position.x -= speed;
     if(keys['d']) player.position.x += speed;
 
-    // Begrenzung auf Plattform
     const limit = platformSize/2 - 1;
     if(player.position.x > limit) player.position.x = limit;
     if(player.position.x < -limit) player.position.x = -limit;
@@ -164,7 +170,7 @@
     if(player.position.z < -limit) player.position.z = -limit;
   }
 
-  // Kaufen per Überlaufen
+  // Kauflogik + Objekte sichtbar machen + Kaufkreise entfernen
   function checkBuy() {
     for(let i=0; i < buyTriggers.length; i++) {
       const bt = buyTriggers[i];
@@ -172,31 +178,32 @@
 
       const dist = player.position.distanceTo(bt.mesh.position);
       if(dist < 1) {
-        // Preise pro Typ (kannst anpassen)
         let cost = 0;
         if(bt.type === 'solar') cost = priceSolar;
-        else if(bt.type === 'labor') cost = priceLabor;
         else if(bt.type === 'handel') cost = priceHandel;
         else cost = priceHouseObj;
 
         if(credits >= cost) {
           credits -= cost;
           bt.bought = true;
-          // Plattform-Kachel färben
+          scene.remove(bt.mesh); // Kaufkreis wegnehmen
+          createPurchasedObject(bt.x, bt.z, bt.type);
+
           const tile = platformTiles[bt.tileIndex];
           if(tile && !tile.bought) {
             tile.bought = true;
-            tile.mesh.material.color.set(0x00ff99); // z.B. grün
+            tile.mesh.material.color.set(0x00ff99);
           }
 
-          // Erhöhen je nach Typ
           if(bt.type === 'solar') {
             solar++;
             priceSolar += priceSolarInc;
-          } else if(bt.type === 'labor') {
-            labor++;
           } else if(bt.type === 'handel') {
             handel++;
+            priceHandel += priceHandelInc;
+          } else {
+            objectsBought++;
+            priceHouseObj += priceHouseObjInc;
           }
 
           updateUI();
@@ -215,17 +222,16 @@
 
   // Einnahmen pro Sekunde
   setInterval(() => {
-    credits += solar * 100 + labor * 50 + handel * 150;
+    credits += solar * 100 + handel * 150;
     updateUI();
   }, 1000);
 
   // UI Update
   function updateUI() {
     document.getElementById('credits').innerText = Math.floor(credits);
-    document.getElementById('labor').innerText = labor;
-    document.getElementById('handel').innerText = handel;
     document.getElementById('solar').innerText = solar;
-    document.getElementById('platform').innerText = platformCount;
+    document.getElementById('handel').innerText = handel;
+    document.getElementById('objects').innerText = objectsBought;
   }
 
   // Animation
