@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Space Station Tycoon 3D - Komplett</title>
+<title>Space Station Tycoon 3D - Korrigiert</title>
 <style>
   body {
     margin: 0; overflow: hidden;
@@ -71,7 +71,7 @@
     scene.background = new THREE.Color('#87ceeb');
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 10);
+    camera.position.set(0, 7, 15);
 
     const renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -94,12 +94,13 @@
       new THREE.MeshStandardMaterial({color: '#228B22'})
     );
     ground.rotation.x = -Math.PI/2;
+    ground.position.y = 0;
     scene.add(ground);
 
     const platformGeom = new THREE.BoxGeometry(20, 0.3, 20);
     const platformMat = new THREE.MeshStandardMaterial({color: '#555555'});
     const platform = new THREE.Mesh(platformGeom, platformMat);
-    platform.position.y = 0;
+    platform.position.y = 0.15;
     scene.add(platform);
 
     // Haus Basis
