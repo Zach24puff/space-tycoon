@@ -33,10 +33,9 @@
   <h1>🚀 Space Station Tycoon</h1>
   <div>💰 Credits: <span id="credits">200</span></div>
   <div>🔬 Labor: <span id="labor">0</span></div>
-  <div>🏪 Handelsstationen: <span id="handel">0</span></div>
+  <div>🏪 Handelsstation: <span id="handel">0</span></div>
   <div>🔋 Solarpanels: <span id="solar">0</span></div>
-  <div>🪐 Plattformen: <span id="platform">1</span> (Startgebiet: 100x100)</div>
-  <div>⭐ Level: <span id="level">1</span></div>
+  <div>🪐 Plattformen: <span id="platform">1</span> (100x100 gehört dir)</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
@@ -48,7 +47,6 @@
   let handel = 0;
   let solar = 0;
   let platformCount = 1; // Große Plattform gehört dir sofort
-  let level = 1;
 
   // Preise (steigen pro Kauf)
   let priceSolar = 100;
@@ -65,7 +63,6 @@
     document.getElementById('handel').innerText = handel;
     document.getElementById('solar').innerText = solar;
     document.getElementById('platform').innerText = platformCount;
-    document.getElementById('level').innerText = level;
   }
 
   // --- Three.js Setup ---
@@ -95,7 +92,6 @@
   scene.add(ambLight);
 
   // --- Boden & große Plattform ---
-  // Große Plattform 100x100 (grau)
   const platformGeo = new THREE.PlaneGeometry(100, 100);
   const platformMat = new THREE.MeshStandardMaterial({color: 0x888888});
   const platform = new THREE.Mesh(platformGeo, platformMat);
@@ -122,61 +118,57 @@
   const playerGeo = new THREE.BoxGeometry(1,2,1);
   const playerMat = new THREE.MeshStandardMaterial({color: 0xff5500});
   const player = new THREE.Mesh(playerGeo, playerMat);
-  player.position.y = 1;
+  player.position.y = 1; // Steht auf Plattform
   scene.add(player);
 
   // --- Häuser (einfache geometrische Objekte mit echten Farben) ---
-  const houseObjs = []; // Array für Hausobjekte (für Kauf)
+  const houseObjs = [];
 
   function createHouse(x, z) {
-    const baseColor = 0x8B4513; // braun
-    const windowColor = 0xFFFFCC; // hellgelb
-    const roofColor = 0xA52A2A; // rotbraun
+    const baseColor = 0x8B4513;
+    const windowColor = 0xFFFFCC;
+    const roofColor = 0xA52A2A;
 
-    // Boden Stock
     const base = new THREE.Mesh(
       new THREE.BoxGeometry(4, 2, 4),
-      new THREE.MeshStandardMaterial({color: baseColor, transparent:true, opacity: 0.3})
+      new THREE.MeshStandardMaterial({color: baseColor, transparent:true, opacity:0.4})
     );
     base.position.set(x, 1, z);
     scene.add(base);
-    houseObjs.push({mesh: base, type: 'houseObj', bought: false});
+    houseObjs.push({mesh: base, bought: false});
 
-    // Fenster (gelbe Boxen)
     const window1 = new THREE.Mesh(
       new THREE.BoxGeometry(1,1,0.1),
-      new THREE.MeshStandardMaterial({color: windowColor, transparent:true, opacity: 0.3})
+      new THREE.MeshStandardMaterial({color: windowColor, transparent:true, opacity:0.4})
     );
     window1.position.set(x - 1, 1.5, z + 2.05);
     scene.add(window1);
-    houseObjs.push({mesh: window1, type: 'houseObj', bought: false});
+    houseObjs.push({mesh: window1, bought: false});
 
     const window2 = window1.clone();
     window2.position.set(x + 1, 1.5, z + 2.05);
     scene.add(window2);
-    houseObjs.push({mesh: window2, type: 'houseObj', bought: false});
+    houseObjs.push({mesh: window2, bought: false});
 
-    // 2. Stock
     const secondFloor = new THREE.Mesh(
       new THREE.BoxGeometry(4, 2, 4),
-      new THREE.MeshStandardMaterial({color: baseColor, transparent:true, opacity: 0.3})
+      new THREE.MeshStandardMaterial({color: baseColor, transparent:true, opacity:0.4})
     );
     secondFloor.position.set(x, 3.5, z);
     scene.add(secondFloor);
-    houseObjs.push({mesh: secondFloor, type: 'houseObj', bought: false});
+    houseObjs.push({mesh: secondFloor, bought: false});
 
-    // Dach
     const roof = new THREE.Mesh(
       new THREE.ConeGeometry(3, 2, 4),
-      new THREE.MeshStandardMaterial({color: roofColor, transparent:true, opacity: 0.3})
+      new THREE.MeshStandardMaterial({color: roofColor, transparent:true, opacity:0.4})
     );
     roof.position.set(x, 5.5, z);
     roof.rotation.y = Math.PI / 4;
     scene.add(roof);
-    houseObjs.push({mesh: roof, type: 'houseObj', bought: false});
+    houseObjs.push({mesh: roof, bought: false});
   }
 
-  // Beispiel-Häuser
+  // Beispielhäuser
   createHouse(10, 10);
   createHouse(-10, -10);
   createHouse(20, -20);
@@ -201,16 +193,25 @@
     addTree(Math.random()*90-45, Math.random()*90-45);
   }
 
-  // --- Kaufkreise (Trigger) ---
+  // --- Kaufkreise ---
   const buyTriggers = [];
 
-  // Kaufkreis erstellen
-  function addBuyTrigger(x, z, type, objIndex = null) {
+  houseObjs.forEach((obj, i) => {
+    const trigger = new THREE.Mesh(
+      new THREE.CircleGeometry(0.7, 32),
+      new THREE.MeshBasicMaterial({color: 0x00ffcc, transparent: true, opacity: 0.5})
+    );
+    trigger.rotation.x = -Math.PI/2;
+    trigger.position.set(obj.mesh.position.x, 0.02, obj.mesh.position.z);
+    scene.add(trigger);
+    buyTriggers.push({mesh: trigger, type:'houseObj', objIndex: i, bought:false});
+  });
+
+  function addBuyTrigger(x, z, type) {
     const colorMap = {
       'solar': 0x00ffff,
       'labor': 0xffff00,
       'handel': 0xff00ff,
-      'houseObj': 0x00ffcc
     };
     const trigger = new THREE.Mesh(
       new THREE.CircleGeometry(0.7, 32),
@@ -219,15 +220,9 @@
     trigger.rotation.x = -Math.PI/2;
     trigger.position.set(x, 0.02, z);
     scene.add(trigger);
-    buyTriggers.push({mesh: trigger, type: type, objIndex: objIndex, bought: false});
+    buyTriggers.push({mesh: trigger, type: type, bought:false});
   }
 
-  // Kaufkreise über Hausobjekten
-  houseObjs.forEach((obj, i) => {
-    addBuyTrigger(obj.mesh.position.x, obj.mesh.position.z, 'houseObj', i);
-  });
-
-  // Viele Kaufkreise für Solar, Labor, Handel (zufällig verteilt)
   for(let i=0; i<500; i++) {
     const x = Math.random()*90-45;
     const z = Math.random()*90-45;
@@ -236,7 +231,7 @@
     addBuyTrigger(x, z, t);
   }
 
-  // --- Spieler Bewegung ---
+  // --- Steuerung & Bewegung ---
   const keys = {};
   document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
   document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -253,9 +248,10 @@
 
     // Springen mit Leertaste
     if(keys[' '] && isOnGround) {
-      velocityY = 0.2;
+      velocityY = 0.15;
       isOnGround = false;
     }
+
     player.position.y += velocityY;
     velocityY -= 0.01;
 
@@ -265,64 +261,63 @@
       isOnGround = true;
     }
 
-    // Spieler innerhalb Plattform halten
-    player.position.x = Math.min(49.5, Math.max(-49.5, player.position.x));
-    player.position.z = Math.min(49.5, Math.max(-49.5, player.position.z));
+    // Plattform Grenzen
+    if(player.position.x > 49.5) player.position.x = 49.5;
+    if(player.position.x < -49.5) player.position.x = -49.5;
+    if(player.position.z > 49.5) player.position.z = 49.5;
+    if(player.position.z < -49.5) player.position.z = -49.5;
   }
 
-  // --- Kauf-Check beim Überlaufen ---
+  // --- Kaufen per Überlaufen ---
   function checkBuy() {
-    buyTriggers.forEach(bt => {
-      if(bt.bought) return;
-      if(player.position.distanceTo(bt.mesh.position) < 1) {
-        // Kauf nach Typ
-        switch(bt.type) {
-          case 'houseObj':
-            if(credits >= priceHouseObj) {
-              credits -= priceHouseObj;
-              bt.bought = true;
-              houseObjs[bt.objIndex].bought = true;
-              houseObjs[bt.objIndex].mesh.material.opacity = 1;
-              houseObjs[bt.objIndex].mesh.material.transparent = false;
-              priceHouseObj += priceHouseObjInc;
-              updateUI();
-              playSound();
-            }
-            break;
-          case 'solar':
-            if(credits >= priceSolar) {
-              credits -= priceSolar;
-              solar++;
-              bt.bought = true;
-              priceSolar += priceSolarInc;
-              updateUI();
-              playSound();
-            }
-            break;
-          case 'labor':
-            if(credits >= priceLabor) {
-              credits -= priceLabor;
-              labor++;
-              bt.bought = true;
-              updateUI();
-              playSound();
-            }
-            break;
-          case 'handel':
-            if(credits >= priceHandel) {
-              credits -= priceHandel;
-              handel++;
-              bt.bought = true;
-              updateUI();
-              playSound();
-            }
-            break;
+    for(let i=0; i < buyTriggers.length; i++) {
+      const bt = buyTriggers[i];
+      if(bt.bought) continue;
+
+      const dist = player.position.distanceTo(bt.mesh.position);
+      if(dist < 1) {
+        if(bt.type === 'houseObj') {
+          if(credits >= priceHouseObj) {
+            credits -= priceHouseObj;
+            bt.bought = true;
+            houseObjs[bt.objIndex].bought = true;
+            houseObjs[bt.objIndex].mesh.material.opacity = 1;
+            houseObjs[bt.objIndex].mesh.material.transparent = false;
+            priceHouseObj += priceHouseObjInc;
+            updateUI();
+            playSound();
+          }
+        } else if(bt.type === 'solar') {
+          if(credits >= priceSolar) {
+            credits -= priceSolar;
+            solar++;
+            bt.bought = true;
+            priceSolar += priceSolarInc;
+            updateUI();
+            playSound();
+          }
+        } else if(bt.type === 'labor') {
+          if(credits >= priceLabor) {
+            credits -= priceLabor;
+            labor++;
+            bt.bought = true;
+            updateUI();
+            playSound();
+          }
+        } else if(bt.type === 'handel') {
+          if(credits >= priceHandel) {
+            credits -= priceHandel;
+            handel++;
+            bt.bought = true;
+            updateUI();
+            playSound();
+          }
         }
       }
-    });
+    }
   }
 
-  // --- Sound beim Kauf ---
+  // --- Sound ---
   function playSound() {
     const audio = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_6efb4b5c60.mp3?filename=menu-click-110818.mp3");
     audio.volume = 0.3;
@@ -335,7 +330,7 @@
     updateUI();
   }, 1000);
 
-  // --- Animation und Hauptschleife ---
+  // --- Animation ---
   function animate() {
     requestAnimationFrame(animate);
     movePlayer();
@@ -344,7 +339,7 @@
   }
   animate();
 
-  // --- Fensteranpassung ---
+  // Resize-Handler
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
