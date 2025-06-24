@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>3D Space Station Tycoon - mit Sound & Effekten</title>
+  <title>3D Space Station Tycoon - Landschaft mit Straße & Häusern</title>
   <style>
-    /* (Style unverändert, siehe vorheriges Beispiel) */
     body, html {
       margin: 0; padding: 0; overflow: hidden;
-      background: #000011;
+      background: linear-gradient(to top, #87ceeb, #cceeff); /* Heller Himmel-Gradient */
       font-family: Arial, sans-serif;
       color: white;
       user-select: none;
@@ -21,7 +20,7 @@
       border-radius: 10px;
       box-shadow: 0 0 10px #00ffcc;
       z-index: 10;
-      width: 180px;
+      width: 220px;
     }
     #ui h1 {
       color: #00ffcc;
@@ -45,7 +44,6 @@
       user-select: none;
       z-index: 20;
       transition: background 0.3s;
-      user-select: none;
     }
     #buyButton3d:hover {
       background: #00aaaa;
@@ -68,10 +66,12 @@
   <script>
     // Szene, Kamera, Renderer
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000011);
+
+    // Himmel-Farbe als Hintergrund
+    scene.background = new THREE.Color(0x87ceeb); // Himmelblau
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 10);
+    camera.position.set(0, 5, 15);
 
     const renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -80,32 +80,94 @@
     document.body.appendChild(renderer.domElement);
 
     // Licht
-    const ambientLight = new THREE.AmbientLight(0x404040, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0x00ffcc, 1);
-    dirLight.position.set(5, 10, 7);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 50;
-    dirLight.shadow.camera.left = -20;
-    dirLight.shadow.camera.right = 20;
-    dirLight.shadow.camera.top = 20;
-    dirLight.shadow.camera.bottom = -20;
-    scene.add(dirLight);
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+    sunLight.position.set(10, 20, 10);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 50;
+    sunLight.shadow.camera.left = -30;
+    sunLight.shadow.camera.right = 30;
+    sunLight.shadow.camera.top = 30;
+    sunLight.shadow.camera.bottom = -30;
+    scene.add(sunLight);
 
-    // Boden (Plattform)
-    const floorGeometry = new THREE.PlaneGeometry(100, 100);
-    const floorMaterial = new THREE.MeshStandardMaterial({color: 0x222244});
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = 0;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    // Boden (Gras)
+    const grassGeometry = new THREE.PlaneGeometry(100, 100);
+    const grassMaterial = new THREE.MeshStandardMaterial({color: 0x3a923a});
+    const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+    grass.rotation.x = -Math.PI / 2;
+    grass.receiveShadow = true;
+    scene.add(grass);
 
-    // Spieler: Box + Edges (leuchtende Kanten)
+    // Straße - lange graue Ebene in der Mitte
+    const roadGeometry = new THREE.PlaneGeometry(10, 100);
+    const roadMaterial = new THREE.MeshStandardMaterial({color: 0x444444});
+    const road = new THREE.Mesh(roadGeometry, roadMaterial);
+    road.position.y = 0.01; // leicht über Gras, damit nicht z-fighting
+    road.rotation.x = -Math.PI / 2;
+    road.receiveShadow = true;
+    scene.add(road);
+
+    // Straßen-Markierungen (streifen)
+    const stripeGeometry = new THREE.PlaneGeometry(1, 5);
+    const stripeMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+    for(let i=-40; i<40; i+=10) {
+      const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+      stripe.position.set(0, 0.02, i);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.receiveShadow = true;
+      scene.add(stripe);
+    }
+
+    // Häuser links und rechts der Straße
+    const houseGroup = new THREE.Group();
+
+    function createHouse() {
+      const house = new THREE.Group();
+
+      // Haus-Körper
+      const bodyGeo = new THREE.BoxGeometry(3, 2, 3);
+      const bodyMat = new THREE.MeshStandardMaterial({color: 0xffcc66});
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      body.position.y = 1;
+      house.add(body);
+
+      // Dach (Pyramide)
+      const roofGeo = new THREE.ConeGeometry(2.2, 1, 4);
+      const roofMat = new THREE.MeshStandardMaterial({color: 0x8b0000});
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.y = 2.5;
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = true;
+      house.add(roof);
+
+      return house;
+    }
+
+    // Häuser links platzieren (-10 X Achse)
+    for(let i= -40; i < 50; i += 12) {
+      let h = createHouse();
+      h.position.set(-10, 0, i);
+      houseGroup.add(h);
+    }
+
+    // Häuser rechts platzieren (+10 X Achse)
+    for(let i= -40; i < 50; i += 12) {
+      let h = createHouse();
+      h.position.set(10, 0, i+6); // leicht versetzt
+      houseGroup.add(h);
+    }
+
+    scene.add(houseGroup);
+
+    // Spieler: Box mit Kantenlinien
     const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
     const playerMaterial = new THREE.MeshStandardMaterial({color: 0x00ffcc});
     const player = new THREE.Mesh(playerGeometry, playerMaterial);
@@ -223,7 +285,7 @@
     function animate() {
       requestAnimationFrame(animate);
 
-      // Bewegung mit geänderter Steuerung:
+      // Bewegung mit Steuerung:
       // W = vorwärts (negative Z)
       // S = rückwärts (positive Z)
       // A = links (negative X)
@@ -251,7 +313,7 @@
       player.position.y += velocityY;
 
       // Sprung nur auf Leertaste
-      if (keys[' ' ] && canJump) {
+      if (keys[' '] && canJump) {
         velocityY = jumpSpeed;
         canJump = false;
         playBeep(800, 0.12);
@@ -273,8 +335,8 @@
 
       // Kamera folgt Spieler
       camera.position.x = player.position.x;
-      camera.position.z = player.position.z + 10;
-      camera.position.y = player.position.y + 5;
+      camera.position.z = player.position.z + 15;
+      camera.position.y = player.position.y + 7;
       camera.lookAt(player.position);
 
       renderer.render(scene, camera);
