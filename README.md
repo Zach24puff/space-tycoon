@@ -33,9 +33,10 @@
   <h1>🚀 Space Station Tycoon</h1>
   <div>💰 Credits: <span id="credits">200</span></div>
   <div>🔬 Labor: <span id="labor">0</span></div>
-  <div>🏪 Handelsstation: <span id="handel">0</span></div>
+  <div>🏪 Handelsstationen: <span id="handel">0</span></div>
   <div>🔋 Solarpanels: <span id="solar">0</span></div>
-  <div>🪐 Plattformen: <span id="platform">1</span> (100x100 gehört dir)</div>
+  <div>🪐 Plattformen: <span id="platform">1</span> (Startgebiet: 100x100)</div>
+  <div>⭐ Level: <span id="level">1</span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
@@ -47,6 +48,7 @@
   let handel = 0;
   let solar = 0;
   let platformCount = 1; // Große Plattform gehört dir sofort
+  let level = 1;
 
   // Preise (steigen pro Kauf)
   let priceSolar = 100;
@@ -63,6 +65,7 @@
     document.getElementById('handel').innerText = handel;
     document.getElementById('solar').innerText = solar;
     document.getElementById('platform').innerText = platformCount;
+    document.getElementById('level').innerText = level;
   }
 
   // --- Three.js Setup ---
@@ -108,7 +111,6 @@
     grass.position.set(x, 0.01, z);
     scene.add(grass);
   }
-  // Ränder von Plattform
   for(let i = -45; i <= 45; i += 10) {
     addGrassPatch(-50, i);
     addGrassPatch(50, i);
@@ -126,7 +128,6 @@
   // --- Häuser (einfache geometrische Objekte mit echten Farben) ---
   const houseObjs = []; // Array für Hausobjekte (für Kauf)
 
-  // Erzeuge Häuser mit mehrere Objekte (2 Stockwerke, jedes Objekt separat kaufbar)
   function createHouse(x, z) {
     const baseColor = 0x8B4513; // braun
     const windowColor = 0xFFFFCC; // hellgelb
@@ -135,7 +136,7 @@
     // Boden Stock
     const base = new THREE.Mesh(
       new THREE.BoxGeometry(4, 2, 4),
-      new THREE.MeshStandardMaterial({color: baseColor})
+      new THREE.MeshStandardMaterial({color: baseColor, transparent:true, opacity: 0.3})
     );
     base.position.set(x, 1, z);
     scene.add(base);
@@ -144,7 +145,7 @@
     // Fenster (gelbe Boxen)
     const window1 = new THREE.Mesh(
       new THREE.BoxGeometry(1,1,0.1),
-      new THREE.MeshStandardMaterial({color: windowColor})
+      new THREE.MeshStandardMaterial({color: windowColor, transparent:true, opacity: 0.3})
     );
     window1.position.set(x - 1, 1.5, z + 2.05);
     scene.add(window1);
@@ -158,7 +159,7 @@
     // 2. Stock
     const secondFloor = new THREE.Mesh(
       new THREE.BoxGeometry(4, 2, 4),
-      new THREE.MeshStandardMaterial({color: baseColor})
+      new THREE.MeshStandardMaterial({color: baseColor, transparent:true, opacity: 0.3})
     );
     secondFloor.position.set(x, 3.5, z);
     scene.add(secondFloor);
@@ -167,7 +168,7 @@
     // Dach
     const roof = new THREE.Mesh(
       new THREE.ConeGeometry(3, 2, 4),
-      new THREE.MeshStandardMaterial({color: roofColor})
+      new THREE.MeshStandardMaterial({color: roofColor, transparent:true, opacity: 0.3})
     );
     roof.position.set(x, 5.5, z);
     roof.rotation.y = Math.PI / 4;
@@ -175,7 +176,7 @@
     houseObjs.push({mesh: roof, type: 'houseObj', bought: false});
   }
 
-  // Beispiel-Haus
+  // Beispiel-Häuser
   createHouse(10, 10);
   createHouse(-10, -10);
   createHouse(20, -20);
@@ -200,31 +201,16 @@
     addTree(Math.random()*90-45, Math.random()*90-45);
   }
 
-  // --- Kauf-Triggers (Kreise auf der Plattform) ---
+  // --- Kaufkreise (Trigger) ---
   const buyTriggers = [];
 
-  // Erstelle Kaufkreise über Häuser-Objekten & Solar + Labor + Handel
-  // Positionen müssen auf der Plattform sein
-  // Rund 700 Kaufkreise verteilt (für Demo 50 Häuser-Objekte, Rest Solar+Labor+Handel)
-
-  // Erst Häuserobjekte als Kauftriggers (zuordnen zu Hausobjekten)
-  houseObjs.forEach((obj, i) => {
-    const trigger = new THREE.Mesh(
-      new THREE.CircleGeometry(0.7, 32),
-      new THREE.MeshBasicMaterial({color: 0x00ffcc, transparent: true, opacity: 0.5})
-    );
-    trigger.rotation.x = -Math.PI/2;
-    trigger.position.set(obj.mesh.position.x, 0.02, obj.mesh.position.z);
-    scene.add(trigger);
-    buyTriggers.push({mesh: trigger, type:'houseObj', objIndex: i, bought:false});
-  });
-
-  // Funktion: Erstelle Kaufkreis an X,Z mit Typ
-  function addBuyTrigger(x, z, type) {
+  // Kaufkreis erstellen
+  function addBuyTrigger(x, z, type, objIndex = null) {
     const colorMap = {
       'solar': 0x00ffff,
       'labor': 0xffff00,
       'handel': 0xff00ff,
+      'houseObj': 0x00ffcc
     };
     const trigger = new THREE.Mesh(
       new THREE.CircleGeometry(0.7, 32),
@@ -233,10 +219,15 @@
     trigger.rotation.x = -Math.PI/2;
     trigger.position.set(x, 0.02, z);
     scene.add(trigger);
-    buyTriggers.push({mesh: trigger, type: type, bought:false});
+    buyTriggers.push({mesh: trigger, type: type, objIndex: objIndex, bought: false});
   }
 
-  // Verteile viele Kaufkreise Solar, Labor, Handel zufällig
+  // Kaufkreise über Hausobjekten
+  houseObjs.forEach((obj, i) => {
+    addBuyTrigger(obj.mesh.position.x, obj.mesh.position.z, 'houseObj', i);
+  });
+
+  // Viele Kaufkreise für Solar, Labor, Handel (zufällig verteilt)
   for(let i=0; i<500; i++) {
     const x = Math.random()*90-45;
     const z = Math.random()*90-45;
@@ -245,7 +236,7 @@
     addBuyTrigger(x, z, t);
   }
 
-  // --- Spieler Bewegung & Steuerung ---
+  // --- Spieler Bewegung ---
   const keys = {};
   document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
   document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -274,65 +265,64 @@
       isOnGround = true;
     }
 
-    // Grenzen Spieler auf Plattform
-    if(player.position.x > 49.5) player.position.x = 49.5;
-    if(player.position.x < -49.5) player.position.x = -49.5;
-    if(player.position.z > 49.5) player.position.z = 49.5;
-    if(player.position.z < -49.5) player.position.z = -49.5;
+    // Spieler innerhalb Plattform halten
+    player.position.x = Math.min(49.5, Math.max(-49.5, player.position.x));
+    player.position.z = Math.min(49.5, Math.max(-49.5, player.position.z));
   }
 
-  // --- Kaufen durch überlaufen ---
+  // --- Kauf-Check beim Überlaufen ---
   function checkBuy() {
-    for(let i=0; i < buyTriggers.length; i++) {
-      const bt = buyTriggers[i];
-      if(bt.bought) continue; // schon gekauft
-
-      const dist = player.position.distanceTo(bt.mesh.position);
-      if(dist < 1) {
-        // Kauf je nach Typ
-        if(bt.type === 'houseObj') {
-          if(credits >= priceHouseObj) {
-            credits -= priceHouseObj;
-            bt.bought = true;
-            houseObjs[bt.objIndex].bought = true;
-            // Sichtbar machen (Materialfarbe voll)
-            houseObjs[bt.objIndex].mesh.material.opacity = 1;
-            houseObjs[bt.objIndex].mesh.material.transparent = false;
-            priceHouseObj += priceHouseObjInc; // Preis erhöhen
-            updateUI();
-            playSound();
-          }
-        } else if(bt.type === 'solar') {
-          if(credits >= priceSolar) {
-            credits -= priceSolar;
-            solar++;
-            bt.bought = true;
-            priceSolar += priceSolarInc;
-            updateUI();
-            playSound();
-          }
-        } else if(bt.type === 'labor') {
-          if(credits >= priceLabor) {
-            credits -= priceLabor;
-            labor++;
-            bt.bought = true;
-            updateUI();
-            playSound();
-          }
-        } else if(bt.type === 'handel') {
-          if(credits >= priceHandel) {
-            credits -= priceHandel;
-            handel++;
-            bt.bought = true;
-            updateUI();
-            playSound();
-          }
+    buyTriggers.forEach(bt => {
+      if(bt.bought) return;
+      if(player.position.distanceTo(bt.mesh.position) < 1) {
+        // Kauf nach Typ
+        switch(bt.type) {
+          case 'houseObj':
+            if(credits >= priceHouseObj) {
+              credits -= priceHouseObj;
+              bt.bought = true;
+              houseObjs[bt.objIndex].bought = true;
+              houseObjs[bt.objIndex].mesh.material.opacity = 1;
+              houseObjs[bt.objIndex].mesh.material.transparent = false;
+              priceHouseObj += priceHouseObjInc;
+              updateUI();
+              playSound();
+            }
+            break;
+          case 'solar':
+            if(credits >= priceSolar) {
+              credits -= priceSolar;
+              solar++;
+              bt.bought = true;
+              priceSolar += priceSolarInc;
+              updateUI();
+              playSound();
+            }
+            break;
+          case 'labor':
+            if(credits >= priceLabor) {
+              credits -= priceLabor;
+              labor++;
+              bt.bought = true;
+              updateUI();
+              playSound();
+            }
+            break;
+          case 'handel':
+            if(credits >= priceHandel) {
+              credits -= priceHandel;
+              handel++;
+              bt.bought = true;
+              updateUI();
+              playSound();
+            }
+            break;
         }
       }
-    }
+    });
   }
 
-  // --- Sound ---
+  // --- Sound beim Kauf ---
   function playSound() {
     const audio = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_6efb4b5c60.mp3?filename=menu-click-110818.mp3");
     audio.volume = 0.3;
@@ -345,7 +335,7 @@
     updateUI();
   }, 1000);
 
-  // --- Hauptanimation ---
+  // --- Animation und Hauptschleife ---
   function animate() {
     requestAnimationFrame(animate);
     movePlayer();
@@ -354,7 +344,7 @@
   }
   animate();
 
-  // Resize
+  // --- Fensteranpassung ---
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
