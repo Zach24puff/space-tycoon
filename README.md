@@ -21,7 +21,7 @@
       padding: 15px;
       border-radius: 10px;
       box-shadow: 0 0 10px #00ffcc;
-      z-index: 10;
+      z-index: 9999;
       color: white;
       font-family: Arial, sans-serif;
       width: 90vw;
@@ -49,7 +49,7 @@
     scene.background = new THREE.Color(0x111111);
 
     const camera = new THREE.OrthographicCamera(-750, 750, 750, -750, 0.1, 10000);
-    camera.position.set(0, 1000, 0);
+    camera.position.set(0, 2000, 0);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -76,7 +76,7 @@
       new THREE.CircleGeometry(20, 32),
       new THREE.MeshBasicMaterial({ color: 0xff5500 })
     );
-    player.position.set(0, 1, 0);
+    player.position.set(0, 2, 0);
     scene.add(player);
 
     const keys = {};
@@ -165,11 +165,6 @@
     updateUI();
 
     window.addEventListener('resize', () => {
-      camera.left = -window.innerWidth / 2;
-      camera.right = window.innerWidth / 2;
-      camera.top = window.innerHeight / 2;
-      camera.bottom = -window.innerHeight / 2;
-      camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
